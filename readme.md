@@ -1,6 +1,7 @@
 ## ToeicBrain
 자동으로 토익 LC, RC 문제를 풀고 답안을 출력하는 프로그램입니다.<br/>
-Faster-Whisper와 로컬 LLM을 사용하여 오프라인에서도 구동 가능합니다.
+Faster-Whisper와 로컬 LLM을 사용하여 오프라인에서도 구동 가능합니다.<br/>
+Faster-Whisper 모델은 무조건 Large-v3를 사용하며, 문제풀이를 위한 LLM은 vram 용량에 따라 다른 모델을 다운로드 받습니다.
 
 ## 개발 환경
 <b>백엔드:</b> python 1.0 + nodejs + typescript + electron<br/>
