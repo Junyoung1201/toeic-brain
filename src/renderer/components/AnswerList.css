@@ -1,0 +1,43 @@
+@import '../colors.css';
+
+.answer-field {
+    width: 200px;
+    overflow: hidden;
+}
+
+#answerListHolder {
+    height: 100%;
+    overflow-y: auto;
+}
+
+#answerList {
+
+    display: flex;
+    flex-direction: column;
+
+    >div:not(:last-child) {
+        border-bottom: 1px solid var(--color-lightgray);
+    }
+}
+
+.answer-field .title {
+    font-weight: bold;
+    padding: 20px;
+    padding-top: 65px;
+    padding-bottom: 65px;
+    font-size: 20px;
+}
+
+/*  답안 항목  */
+#answerList > div {
+    display: inline-block;
+    padding: 20px;
+
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+#answerList > div > span:first-child {
+    width: 50px;
+}

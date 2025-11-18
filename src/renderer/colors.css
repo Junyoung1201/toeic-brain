@@ -1,0 +1,42 @@
+:root {
+    /* Gray Scale */
+    --color-white: #ffffff;
+    --color-gray-50: #f9f9f9;
+    --color-gray-100: #f1f1f1;
+    --color-gray-200: #f0f0f0;
+    --color-gray-300: #e0e0e0;
+    --color-gray-400: #999999;
+    --color-gray-500: #888888;
+    --color-gray-600: #666666;
+    --color-gray-700: #555555;
+    --color-gray-800: #333333;
+    --color-gray-900: #1a1a1a;
+    --color-black: #000000;
+
+    /* Light Gray (named colors) */
+    --color-lightgray: lightgray;
+
+    /* Primary/Brand Colors */
+    --color-primary: rgb(112, 112, 254);
+    --color-primary-hover: rgb(90, 90, 230);
+    --color-disabled: gray;
+
+    /* Error Colors (Red) */
+    --color-error-border: #e74c3c;
+    --color-error-text: #c0392b;
+    --color-error-bg: #fadbd8;
+
+    /* Warning Colors (Orange) */
+    --color-warning-border: #f39c12;
+    --color-warning-text: #d68910;
+    --color-warning-bg: #fdebd0;
+
+    /* Info Colors (Blue) */
+    --color-info-border: #3498db;
+    --color-info-text: #2980b9;
+    --color-info-bg: #d6eaf8;
+
+    /* Shadow/Overlay Colors */
+    --color-backdrop: rgba(0, 0, 0, 0.5);
+    --color-shadow: rgba(0, 0, 0, 0.15);
+}

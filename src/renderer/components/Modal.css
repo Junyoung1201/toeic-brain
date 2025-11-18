@@ -1,0 +1,120 @@
+@import '../colors.css';
+
+.modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: var(--color-backdrop);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    animation: fadeIn 0.2s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.modal-content {
+    background: var(--color-white);
+    border-radius: 12px;
+    padding: 30px;
+    min-width: 400px;
+    max-width: 600px;
+    max-height: 80vh;
+    overflow-y: auto;
+    position: relative;
+    box-shadow: 0 4px 20px var(--color-shadow);
+    animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(50px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.modal-close {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background: none;
+    border: none;
+    font-size: 32px;
+    color: var(--color-gray-400);
+    cursor: pointer;
+    width: 40px;
+    height: 40px;
+
+    font-size: 20px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 50%;
+    transition: all 0.2s ease;
+
+    >span {
+        position: relative;   
+        top: -1px;
+    }
+}
+
+.modal-close:hover {
+    background-color: var(--color-gray-200);
+    color: var(--color-gray-800);
+}
+
+.modal-title {
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 20px;
+    padding-right: 40px;
+    color: var(--color-gray-800);
+}
+
+.modal-body {
+    padding: 10px 0;
+}
+
+/* Modal Types */
+.modal-error {
+    border: 3px solid var(--color-error-border);
+}
+
+.modal-error .modal-title {
+    color: var(--color-error-text);
+}
+
+.modal-error .modal-close:hover {
+    background-color: var(--color-error-bg);
+    color: var(--color-error-text);
+}
+
+.modal-warn {
+    border: 3px solid var(--color-warning-border);
+}
+
+.modal-warn .modal-title {
+    color: var(--color-warning-text);
+}
+
+.modal-warn .modal-close:hover {
+    background-color: var(--color-warning-bg);
+    color: var(--color-warning-text);
+}
+
