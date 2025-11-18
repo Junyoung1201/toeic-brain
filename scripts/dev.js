@@ -7,7 +7,6 @@ let electronProcess = null;
 
 async function startDev() {
     try {
-        // 1. Renderer 개발 서버 시작
         console.log('렌더러 서버 시작 중');
         process.env.BUILD_TARGET = 'renderer';
         const server = await createServer({
@@ -18,14 +17,14 @@ async function startDev() {
 
         startElectron();
 
-        // Main 프로세스 파일 변경 감지
+        // 프로세스 파일 변경 감지
         const chokidar = require('chokidar');
         const watcher = chokidar.watch('src/main.ts', {
             ignoreInitial: true,
         });
 
         watcher.on('change', async () => {
-            console.log('Main process changed, rebuilding...');
+            console.log('프로세스 파일 변경됨. 다시 빌드 중');
             process.env.BUILD_TARGET = 'main';
             await build({ configFile: path.resolve(__dirname, '../vite.config.ts') });
 
@@ -36,7 +35,7 @@ async function startDev() {
         });
 
     } catch (error) {
-        console.error('Dev server failed:', error);
+        console.error('개발 환경 서버 시작 실패:', error);
         process.exit(1);
     }
 }
