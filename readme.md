@@ -3,6 +3,10 @@
 Faster-Whisper와 로컬 LLM을 사용하여 오프라인에서도 구동 가능합니다.<br/>
 Faster-Whisper 모델은 무조건 Large-v3를 사용하며, 문제풀이를 위한 LLM은 vram 용량에 따라 다른 모델을 다운로드 받습니다.
 
+## 시스템 요구사항
+- **최소 8GB Vram**이 필요합니다.
+- VRAM 용량에 따라 프로그램에서 사용하는 모델이 다르므로 VRAM이 크면 좋습니다. VRAM에 따른 모델 사용은 아래를 참고해주세요.
+
 ## 개발 환경
 <b>백엔드:</b> python 1.0 + nodejs + typescript + electron<br/>
 <b>프론트(렌더러):</b> typescript + vite + react + react redux toolkit
