@@ -4,7 +4,8 @@ import { ReactNode } from "react";
 export enum ModalType {
     INFO = 'info',
     ERROR = 'error',
-    WARN = 'warn'
+    WARN = 'warn',
+    SETTINGS = 'settings'
 }
 
 interface ModalPayload {
@@ -20,12 +21,15 @@ interface UiState {
     modalTitle: ReactNode | null;
     modalContent: ReactNode | null;
     modalType: ModalType;
+    isLoading: boolean;
+    loadingMessage: string;
+    loadingProgress: number;
 }
 
 const ui = createSlice({
     name: 'ui',
     initialState: {
-        mode: 'lc',
+        mode: 'rc',
         answerList: [
             'A','C','B','D','A','B','C','D','A','B','A','C','B','D','A','B','C','D','A','B'
         ],
@@ -33,6 +37,9 @@ const ui = createSlice({
         modalTitle: null,
         modalContent: null,
         modalType: ModalType.INFO,
+        isLoading: false,
+        loadingMessage: '준비 중...',
+        loadingProgress: 0,
     } as UiState,
     reducers: {
         setAnswerList(state, action: PayloadAction<string[]>) {
@@ -40,6 +47,21 @@ const ui = createSlice({
         },
         setMode(state, action: PayloadAction<'lc' | 'rc'>) {
             state.mode = action.payload;
+        },
+        setLoading(state, action: PayloadAction<boolean>) {
+            state.isLoading = action.payload;
+            if (!action.payload) {
+                state.loadingMessage = '준비 중...';
+                state.loadingProgress = 0;
+            }
+        },
+        setLoadingProgress(state, action: PayloadAction<{message?: string, progress?: number}>) {
+            if (action.payload.message !== undefined) {
+                state.loadingMessage = action.payload.message;
+            }
+            if (action.payload.progress !== undefined) {
+                state.loadingProgress = action.payload.progress;
+            }
         },
         openModal(state, action: PayloadAction<ModalPayload>) {
             const { title, content, type = ModalType.INFO } = action.payload;
@@ -63,5 +85,5 @@ const ui = createSlice({
     }
 })
 
-export const { setAnswerList, setMode, openModal, closeModal } = ui.actions;
+export const { setAnswerList, setMode, openModal, closeModal, setLoading, setLoadingProgress } = ui.actions;
 export default ui.reducer;

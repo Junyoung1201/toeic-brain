@@ -13,3 +13,6 @@ yarn-error.log*
 .env.local
 .env.*.local
 README.md
+logs/
+models/
+__pycache__/
