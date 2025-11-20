@@ -36,7 +36,18 @@ export class PythonManager {
         const scriptPath = path.join(__dirname, '../python/main.py');
         const pythonExecutable = getPythonExecutable();
         
-        this.pythonProcess = spawn(pythonExecutable, [scriptPath]);
+        // 환경 변수 상속 및 PATH 보정
+        const env = { ...process.env };
+        
+        // Windows에서 CUDA 경로가 PATH에 없는 경우를 대비해 추가
+        if (process.platform === 'win32' && process.env.CUDA_PATH) {
+            const cudaBin = path.join(process.env.CUDA_PATH, 'bin');
+            if (!env.PATH?.includes(cudaBin)) {
+                env.PATH = `${cudaBin};${env.PATH || ''}`;
+            }
+        }
+
+        this.pythonProcess = spawn(pythonExecutable, [scriptPath], { env });
         this.dataBuffer = '';
 
         this.pythonProcess.stdout?.on('data', (data: Buffer) => {

@@ -14,9 +14,13 @@ interface ModalPayload {
     type?: ModalType;
 }
 
+export interface Answer {
+    [questionNumber: string]: string
+}
+
 interface UiState {
     mode: 'lc' | 'rc';
-    answerList: string[];
+    answerList: Answer;
     isModalOpen: boolean;
     modalTitle: ReactNode | null;
     modalContent: ReactNode | null;
@@ -30,9 +34,7 @@ const ui = createSlice({
     name: 'ui',
     initialState: {
         mode: 'rc',
-        answerList: [
-            'A','C','B','D','A','B','C','D','A','B','A','C','B','D','A','B','C','D','A','B'
-        ],
+        answerList: {},
         isModalOpen: false,
         modalTitle: null,
         modalContent: null,
@@ -42,8 +44,11 @@ const ui = createSlice({
         loadingProgress: 0,
     } as UiState,
     reducers: {
-        setAnswerList(state, action: PayloadAction<string[]>) {
+        setAnswerList(state, action: PayloadAction<Answer>) {
             state.answerList = action.payload;
+        },
+        clearAnswerList(state) {
+            state.answerList = {};
         },
         setMode(state, action: PayloadAction<'lc' | 'rc'>) {
             state.mode = action.payload;
@@ -85,5 +90,5 @@ const ui = createSlice({
     }
 })
 
-export const { setAnswerList, setMode, openModal, closeModal, setLoading, setLoadingProgress } = ui.actions;
+export const { setAnswerList, clearAnswerList, setMode, openModal, closeModal, setLoading, setLoadingProgress } = ui.actions;
 export default ui.reducer;

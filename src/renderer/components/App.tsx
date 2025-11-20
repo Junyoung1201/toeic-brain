@@ -41,19 +41,27 @@ export default function App() {
                         content: <p>CUDA를 사용할 수 없습니다. NVIDIA GPU가 없거나 드라이버가 설치되지 않았을 수 있습니다.</p>,
                         type: ModalType.ERROR
                     }));
-                } else if (gpuName) {
+                } 
+                
+                else if (gpuName) {
+
                     // VRAM에 따른 모델 자동 설정
                     // VRAM 단위는 MB임. 8GB ~= 8192MB
                     let recommendedModel = '';
                     const vramGb = vram / 1024;
 
+                    let recommendedFilename = '';
+
                     if (vramGb >= 16) {
                         recommendedModel = 'bartowski/Qwen2.5-14B-Instruct-GGUF';
+                        recommendedFilename = 'Qwen2.5-14B-Instruct-Q4_K_M.gguf';
                     } else if (vramGb >= 10) {
                         recommendedModel = 'bartowski/Meta-Llama-3.1-8B-Instruct-GGUF';
+                        recommendedFilename = 'Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf';
                     } else {
                         // 8GB 이하 (또는 그 근처)
                         recommendedModel = 'bartowski/Phi-3.5-mini-instruct-GGUF';
+                        recommendedFilename = 'Phi-3.5-mini-instruct-Q4_K_M.gguf';
                     }
 
                     // GPU 이름에서 시리즈 확인 (예: RTX 3060 -> 30)
@@ -71,7 +79,12 @@ export default function App() {
                     }
 
                     const newSettings: any = {};
-                    if (recommendedModel) newSettings.modelName = recommendedModel;
+
+                    if (recommendedModel) {
+                        newSettings.modelName = recommendedModel;
+                    }
+
+                    if (recommendedFilename) newSettings.modelFilename = recommendedFilename;
                     if (pytorchUrl) newSettings.pytorchUrl = pytorchUrl;
 
                     if (Object.keys(newSettings).length > 0) {
@@ -94,21 +107,27 @@ export default function App() {
                     content: <p>기본 정보 모달입니다.</p>,
                     type: ModalType.INFO
                 }));
-            } else if (e.key === 'F2') {
+            } 
+            
+            else if (e.key === 'F2') {
                 e.preventDefault();
                 dispatch(openModal({
                     title: 'Error 모달',
                     content: <p>오류가 발생했습니다!</p>,
                     type: ModalType.ERROR
                 }));
-            } else if (e.key === 'F3') {
+            } 
+            
+            else if (e.key === 'F3') {
                 e.preventDefault();
                 dispatch(openModal({
                     title: 'Warning 모달',
                     content: <p>경고 메시지입니다.</p>,
                     type: ModalType.WARN
                 }));
-            } else if (e.key === 'F4') {
+            } 
+            
+            else if (e.key === 'F4') {
                 e.preventDefault();
                 dispatch(setLoading(!isLoading));
             }

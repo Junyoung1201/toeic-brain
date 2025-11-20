@@ -23,15 +23,11 @@ export class WindowManager {
         }
 
         this.mainWindow.setMenuBarVisibility(false);
-        this.mainWindow.webContents.openDevTools({ mode: 'detach' });
-
-        this.mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
-            console.error('Failed to load:', errorCode, errorDescription);
-        });
-
-        this.mainWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
-            console.log(`Console [${level}]:`, message, 'at', sourceId, 'line', line);
-        });
+        
+        // 개발 모드에서만 DevTools 열기
+        if (process.env.NODE_ENV === 'development') {
+            this.mainWindow.webContents.openDevTools({ mode: 'detach' });
+        }
 
         return this.mainWindow;
     }

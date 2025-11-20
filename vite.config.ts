@@ -53,7 +53,14 @@ export default defineConfig(({ command, mode }) => {
           fileName: () => 'main.js',
         },
         rollupOptions: {
-          external: ['electron', 'path', ...builtinModules],
+          external: [
+            'electron', 
+            'path', 
+            ...builtinModules,
+            'node-llama-cpp',
+            /^@node-llama-cpp\/.*/,
+            '@xenova/transformers'
+          ],
           output: {
             entryFileNames: '[name].js',
           },

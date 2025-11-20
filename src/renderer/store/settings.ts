@@ -3,6 +3,7 @@ import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 interface SettingsState {
     modelPath: string;
     modelName: string;
+    modelFilename: string;
     pytorchUrl: string;
     llamaCppUrl: string;
 }
@@ -10,6 +11,7 @@ interface SettingsState {
 const initialState: SettingsState = {
     modelPath: '',
     modelName: '',
+    modelFilename: '',
     pytorchUrl: '',
     llamaCppUrl: '',
 };

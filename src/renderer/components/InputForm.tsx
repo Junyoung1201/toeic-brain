@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import './InputForm.css';
-import { setMode, openModal, ModalType, setLoading, setLoadingProgress } from '../store/ui';
+import { setMode, openModal, ModalType, setLoading, setLoadingProgress, setAnswerList } from '../store/ui';
 
 export default function InputForm() {
-    const { mode } = useAppSelector((state) => state.ui);
-    const { modelPath, modelName, pytorchUrl, llamaCppUrl } = useAppSelector((state) => state.settings);
+    const { mode, answerList } = useAppSelector((state) => state.ui);
+    const { modelPath, modelName, modelFilename, pytorchUrl, llamaCppUrl } = useAppSelector((state) => state.settings);
     const [audioFile, setAudioFile] = useState<File | null>(null);
     const [questionText, setQuestionText] = useState('');
     const dispatch = useAppDispatch();
@@ -13,80 +13,119 @@ export default function InputForm() {
     useEffect(() => {
         // @ts-ignore
         const { ipcRenderer } = window.require('electron');
-        
-        const handlePythonMessage = (event: any, message: any) => {
-            console.log('Python message:', message);
-            
-            if (message.type === 'progress') {
-                const { task, current, total } = message.data;
-                const progress = total > 0 ? (current / total) * 100 : 0;
-                
-                if (task === 'download_pytorch') {
-                    dispatch(setLoadingProgress({ 
-                        message: 'PyTorch 다운로드 중...', 
-                        progress 
-                    }));
-                } else if (task === 'download_model') {
-                    dispatch(setLoadingProgress({ 
-                        message: '모델 다운로드 중...', 
-                        progress 
-                    }));
-                }
-            } else if (message.type === 'status') {
-                dispatch(setLoadingProgress({ message: message.data, progress: 0 }));
-            } else if (message.type === 'log') {
-                // 설치 로그는 콘솔에만 출력
-                console.log('[Install]:', message.data);
-            } else if (message.type === 'complete') {
-                const { task, path, answer } = message.data;
-                if (task === 'install_pytorch') {
-                    dispatch(setLoadingProgress({ message: 'PyTorch 설치 완료! 모델 준비 중...', progress: 100 }));
-                    // PyTorch 설치 후 모델 다운로드 시작
-                    if (modelName && modelPath) {
-                        console.log('Starting model download after PyTorch installation');
-                        ipcRenderer.invoke('start-download', {
-                            type: 'model',
-                            repoId: modelName,
-                            saveDir: modelPath
-                        });
-                    }
-                } else if (task === 'download_model') {
-                    dispatch(setLoadingProgress({ message: '모델 다운로드 완료!', progress: 100 }));
-                    // 모델 로드 시작
-                    if (path) {
-                        ipcRenderer.send('load-and-solve', { modelPath: path, problem: questionText, llamaCppUrl });
-                    }
-                } else if (task === 'load_model') {
-                    dispatch(setLoadingProgress({ message: '모델 로드 완료! 문제 풀이 중...', progress: 50 }));
-                    // 모델 로드 완료 알림
-                    ipcRenderer.send('model-loaded');
-                } else if (task === 'solve_problem') {
-                    dispatch(setLoading(false));
-                    // 답안을 answerList에 추가
-                    if (answer) {
-                        dispatch(openModal({
-                            title: '문제 풀이 완료',
-                            content: <p>정답: {answer}</p>,
-                            type: ModalType.INFO
-                        }));
-                    }
-                }
-            } else if (message.type === 'error') {
-                dispatch(setLoading(false));
-                dispatch(openModal({
-                    title: '오류',
-                    content: <p>{message.data}</p>,
-                    type: ModalType.ERROR
-                }));
-            }
+
+        // 모델 다운로드 진행률
+        const handleDownloadProgress = (event: any, data: any) => {
+            const { downloaded, total, progress } = data;
+            dispatch(setLoadingProgress({
+                message: `모델 다운로드 중... ${progress}%`,
+                progress: parseFloat(progress)
+            }));
         };
-        
-        ipcRenderer.on('python-message', handlePythonMessage);
-        
+
+        // 모델 다운로드 완료
+        const handleDownloadComplete = (event: any, data: any) => {
+            console.log('Model download complete:', data);
+            dispatch(setLoadingProgress({
+                message: '모델 다운로드 완료!',
+                progress: 100
+            }));
+        };
+
+        // 모델 다운로드 에러
+        const handleDownloadError = (event: any, data: any) => {
+            console.error('Download error:', data);
+            dispatch(setLoading(false));
+            dispatch(openModal({
+                title: '다운로드 오류',
+                content: <p>{data.error || '모델 다운로드 중 오류가 발생했습니다.'}</p>,
+                type: ModalType.ERROR
+            }));
+        };
+
+        // 모델 로드 상태
+        const handleModelLoadStatus = (event: any, data: any) => {
+            console.log('Model load status:', data);
+            dispatch(setLoadingProgress({
+                message: data.message || '모델 로딩 중...',
+                progress: 30
+            }));
+        };
+
+        // 모델 로드 완료
+        const handleModelLoadComplete = (event: any, data: any) => {
+            console.log('Model load complete:', data);
+            dispatch(setLoadingProgress({
+                message: '모델 로드 완료!',
+                progress: 50
+            }));
+        };
+
+        // 모델 로드 에러
+        const handleModelLoadError = (event: any, data: any) => {
+            console.error('Model load error:', data);
+            dispatch(setLoading(false));
+            dispatch(openModal({
+                title: '모델 로드 오류',
+                content: <p>{data.error || '모델 로드 중 오류가 발생했습니다.'}</p>,
+                type: ModalType.ERROR
+            }));
+        };
+
+        // 문제 풀이 상태
+        const handleSolveStatus = (event: any, data: any) => {
+            console.log('Solve status:', data);
+            dispatch(setLoadingProgress({
+                message: data.message || '문제 풀이 중...',
+                progress: 70
+            }));
+        };
+
+        // 문제 풀이 완료
+        const handleSolveComplete = (event: any, data: any) => {
+
+            console.log('[handleSolveComplete] 문제 풀이 완료:', data);
+
+            dispatch(setLoading(false));
+            dispatch(setAnswerList(data));
+
+            // 문제 입력란 초기화
+            setQuestionText('');
+        };
+
+        // 문제 풀이 에러
+        const handleSolveError = (event: any, data: any) => {
+            console.error('Solve error:', data);
+            dispatch(setLoading(false));
+            dispatch(openModal({
+                title: '문제 풀이 오류',
+                content: <p>{data.error || '문제 풀이 중 오류가 발생했습니다.'}</p>,
+                type: ModalType.ERROR
+            }));
+        };
+
+        ipcRenderer.on('model-download-progress', handleDownloadProgress);
+        ipcRenderer.on('model-download-complete', handleDownloadComplete);
+        ipcRenderer.on('model-download-error', handleDownloadError);
+        ipcRenderer.on('model-load-status', handleModelLoadStatus);
+        ipcRenderer.on('model-load-complete', handleModelLoadComplete);
+        ipcRenderer.on('model-load-error', handleModelLoadError);
+        ipcRenderer.on('solve-status', handleSolveStatus);
+        ipcRenderer.on('solve-complete', handleSolveComplete);
+        ipcRenderer.on('solve-error', handleSolveError);
+
         return () => {
-            ipcRenderer.removeListener('python-message', handlePythonMessage);
+            ipcRenderer.removeListener('model-download-progress', handleDownloadProgress);
+            ipcRenderer.removeListener('model-download-complete', handleDownloadComplete);
+            ipcRenderer.removeListener('model-download-error', handleDownloadError);
+            ipcRenderer.removeListener('model-load-status', handleModelLoadStatus);
+            ipcRenderer.removeListener('model-load-complete', handleModelLoadComplete);
+            ipcRenderer.removeListener('model-load-error', handleModelLoadError);
+            ipcRenderer.removeListener('solve-status', handleSolveStatus);
+            ipcRenderer.removeListener('solve-complete', handleSolveComplete);
+            ipcRenderer.removeListener('solve-error', handleSolveError);
         };
-    }, [dispatch, questionText, llamaCppUrl]);
+    }, [dispatch]);
 
     function onAudioFileChange(e: React.ChangeEvent<HTMLInputElement>) {
         if (e.target.files && e.target.files.length > 0) {
@@ -118,45 +157,125 @@ export default function InputForm() {
         }
 
         dispatch(setLoading(true));
+        dispatch(setLoadingProgress({ message: '모델 확인 중...', progress: 0 }));
 
         try {
             // @ts-ignore
             const { ipcRenderer } = window.require('electron');
-            
-            // 1. PyTorch 다운로드 및 설치 요청
-            if (pytorchUrl) {
-                console.log('Requesting PyTorch download:', pytorchUrl);
-                await ipcRenderer.invoke('start-download', {
-                    type: 'pytorch',
-                    url: pytorchUrl
+
+            // 1. 현재 모델 상태 확인
+            const modelInfo = await ipcRenderer.invoke('get-model-info');
+            console.log('Current model info:', modelInfo);
+
+            // 2. 모델이 로드되어 있으면 바로 문제 풀이
+            if (modelInfo.isLoaded) {
+                console.log('모델 이미 로드되어 있음.');
+                dispatch(setLoadingProgress({ message: '문제 풀이 중...', progress: 50 }));
+
+                const { success, answer, error } = await ipcRenderer.invoke('solve-problem', {
+                    questionText
                 });
-                // PyTorch가 설치 중이면 complete 이벤트에서 모델 다운로드가 시작됨
-                // 여기서는 반환하고 이벤트 핸들러가 나머지를 처리
+
+                if (success) {
+
+                    try {
+                        const answerJson = JSON.parse(answer);
+
+                        console.log("문제 풀이 완료:", answerJson);
+                        dispatch(setAnswerList(answerJson));
+                    } catch (err) {
+                        dispatch(setAnswerList({}));
+                        console.error("LLM이 올바르지 않은 응답을 보냈습니다.");
+                        console.error(err);
+                    } finally {
+                        setQuestionText('');
+                        dispatch(setLoading(false));
+                    }
+                } else {
+                    throw new Error(error || '문제 풀이 실패');
+                }
                 return;
             }
 
-            // 2. PyTorch URL이 없으면 바로 모델 다운로드 시작
-            if (modelName && modelPath) {
-                console.log('Requesting model download:', modelName, 'to', modelPath);
-                await ipcRenderer.invoke('start-download', {
-                    type: 'model',
-                    repoId: modelName,
-                    saveDir: modelPath
-                });
-                // Python에서 complete 메시지를 받을 때까지 대기는 이미 이벤트 리스너가 처리
+            // 3. 모델이 없으면 다운로드 필요 확인
+            if (!modelName) {
+                throw new Error('모델이 설정되지 않았습니다. 설정에서 모델을 선택해주세요.');
             }
 
-            // 3. 모델이 다운로드되어 있는지 확인하고 문제 풀이 시작
-            // 다운로드가 완료되면 이벤트 리스너에서 자동으로 모델 로드 및 문제 풀이 시작
-            
+            // 4. 모델 경로 확인 및 다운로드
+            const fs = window.require('fs');
+            const path = window.require('path');
+
+            // GGUF 파일명 (설정에서 가져오거나 기본값 사용)
+            const ggufFilename = modelFilename || 'Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf';
+            const fullModelPath = path.join(modelPath, ggufFilename);
+
+            console.log('Checking model path:', fullModelPath);
+
+            // 파일 존재 확인
+            let modelExists = false;
+            try {
+                fs.accessSync(fullModelPath);
+                modelExists = true;
+                console.log('Model file exists');
+            } catch {
+                console.log('Model file not found, need to download');
+            }
+
+            // 5. 모델이 없으면 다운로드
+            if (!modelExists) {
+                dispatch(setLoadingProgress({ message: '모델 다운로드 시작...', progress: 10 }));
+
+                const downloadResult = await ipcRenderer.invoke('start-download', {
+                    type: 'model',
+                    repoId: modelName,
+                    filename: ggufFilename,
+                    saveDir: modelPath
+                });
+
+                if (!downloadResult.success) {
+                    throw new Error(downloadResult.error || '모델 다운로드 실패');
+                }
+            }
+
+            // 6. 모델 로드
+            dispatch(setLoadingProgress({ message: '모델 로딩 중...', progress: 40 }));
+            console.log('Loading model from:', fullModelPath);
+
+            const loadResult = await ipcRenderer.invoke('load-model', {
+                modelPath: fullModelPath
+            });
+
+            if (!loadResult.success) {
+                throw new Error(loadResult.error || '모델 로드 실패');
+            }
+
+            // 7. 문제 풀이
+            dispatch(setLoadingProgress({ message: '문제 풀이 중...', progress: 70 }));
+
+            const solveResult = await ipcRenderer.invoke('solve-problem', {
+                questionText
+            });
+
+            if (solveResult.success) {
+                dispatch(setLoading(false));
+
+                console.log("문제 풀이 완료:", solveResult.answer);
+
+                dispatch(setAnswerList(solveResult.answer));
+                setQuestionText('');
+            } else {
+                throw new Error(solveResult.error || '문제 풀이 실패');
+            }
+
         } catch (error) {
-            console.error('Download failed:', error);
+            console.error('Submit failed:', error);
+            dispatch(setLoading(false));
             dispatch(openModal({
                 title: '오류',
-                content: <p>다운로드 중 오류가 발생했습니다.</p>,
+                content: <p>{String(error)}</p>,
                 type: ModalType.ERROR
             }));
-            dispatch(setLoading(false));
         }
     };
 
@@ -179,7 +298,7 @@ export default function InputForm() {
             </div>
 
             <div className='input-field'>
-                <textarea 
+                <textarea
                     placeholder='여기에 문제 입력'
                     value={questionText}
                     onChange={(e) => setQuestionText(e.target.value)}

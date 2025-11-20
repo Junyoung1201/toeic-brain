@@ -8,6 +8,10 @@ export default function AnswerList() {
     const [width, setWidth] = useState(250);
     const [isResizing, setIsResizing] = useState(false);
 
+    useEffect(() => {
+        console.log('answerList:', answerList);
+    }, [answerList]);
+
     const startResizing = useCallback(() => {
         setIsResizing(true);
     }, []);
@@ -47,12 +51,15 @@ export default function AnswerList() {
 
             <div id='answerListHolder'>
                 <div id='answerList'>
-                    {answerList.map((answer, index) => (
-                        <div key={`answer_item_${index}`}>
-                            <span>{index + 1}번</span>
-                            <span>{answer}</span>
-                        </div>
-                    ))}
+                    {
+                        answerList &&
+                        Object.entries(answerList).map(([key, value], index) => (
+                            <div key={`answer_item_${index}`}>
+                                <span>{key}번</span>
+                                <span>{value}</span>
+                            </div>
+                        ))
+                    }
                 </div>
             </div>
         </div>

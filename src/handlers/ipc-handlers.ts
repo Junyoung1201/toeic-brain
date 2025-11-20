@@ -1,11 +1,11 @@
 import { ipcMain, app } from 'electron';
 import { exec } from 'child_process';
 import * as path from 'path';
-import { PythonManager } from '../managers/python-manager';
-import { PipInstaller } from '../managers/pip-installer';
 import { logInfo, logError } from '../utils/logger';
+import { llmManager } from '../managers/llm-manager';
+import { modelDownloader } from '../managers/model-downloader';
 
-export function registerIpcHandlers(pythonManager: PythonManager, pipInstaller: PipInstaller): void {
+export function registerIpcHandlers(): void {
     // CUDA 확인
     ipcMain.handle('check-cuda', async () => {
         return new Promise((resolve) => {
@@ -28,63 +28,55 @@ export function registerIpcHandlers(pythonManager: PythonManager, pipInstaller: 
         return path.join(basePath, 'models');
     });
 
-    // 다운로드 시작
+    // 모델 다운로드
     ipcMain.handle('start-download', async (event, args) => {
-        if (!pythonManager.isRunning()) {
-            pythonManager.start();
-        }
-
-        const { type, url, savePath, repoId, saveDir, filename } = args;
+        const { type, repoId, saveDir, filename } = args;
         
-        if (type === 'pytorch') {
-            pythonManager.sendCommand('download_pytorch', { url, save_path: savePath });
-        } else if (type === 'model') {
-            pythonManager.sendCommand('download_model', { 
-                repo_id: repoId, 
-                save_dir: saveDir, 
-                filename 
-            });
+        if (type === 'model') {
+            try {
+                const modelPath = await modelDownloader.downloadModel(repoId, filename, saveDir);
+                return { success: true, path: modelPath };
+            } catch (error) {
+                logError('Download failed:', error);
+                return { success: false, error: String(error) };
+            }
         }
         
-        return true;
+        return { success: false, error: 'Invalid download type' };
     });
 
-    // 모델 로드 및 문제 풀이
-    ipcMain.on('load-and-solve', (event, args) => {
-        if (!pythonManager.isRunning()) {
-            logError('Python process not running');
-            return;
-        }
-
-        const { modelPath, problem, llamaCppUrl } = args;
-        pythonManager.pendingProblem = problem;
-        pythonManager.lastModelPath = modelPath;
-        pythonManager.configuredLlamaCppUrl = llamaCppUrl || null;
+    // 모델 로드
+    ipcMain.handle('load-model', async (event, args) => {
+        const { modelPath } = args;
         
-        logInfo('Loading model:', modelPath);
-        if (pythonManager.configuredLlamaCppUrl) {
-            logInfo('Configured llama-cpp-python URL:', pythonManager.configuredLlamaCppUrl);
+        try {
+            logInfo('Loading model:', modelPath);
+            await llmManager.loadModel({ modelPath });
+            return { success: true };
+        } catch (error) {
+            logError('Failed to load model:', error);
+            return { success: false, error: String(error) };
         }
-        
-        pythonManager.sendCommand('load_model', { model_path: modelPath });
     });
 
-    // 모델 로드 완료 알림
-    ipcMain.on('model-loaded', (event) => {
-        if (!pythonManager.isRunning() || !pythonManager.pendingProblem) {
-            return;
-        }
+    // 문제 풀이
+    ipcMain.handle('solve-problem', async (event, args) => {
+        const { questionText } = args;
         
-        logInfo('Model loaded, solving problem:', pythonManager.pendingProblem);
-        pythonManager.sendCommand('solve_problem', { problem: pythonManager.pendingProblem });
-        pythonManager.pendingProblem = null;
+        try {
+            logInfo("문제 푸는 중..");
+
+            const answer = await llmManager.solveProblem(questionText);
+            return { success: true, answer };
+
+        } catch (error) {
+            logError("문제 풀이 실패:", error);
+            return { success: false, error: String(error) };
+        }
     });
 
-    // 설치 요청 처리를 위한 Python 메시지 리스너
-    // (이 부분은 PythonManager에서 직접 처리하도록 수정 필요)
-}
-
-export function setupInstallHandler(pythonManager: PythonManager, pipInstaller: PipInstaller): void {
-    // Python 메시지에서 install_needed를 감지하기 위한 추가 핸들러
-    // 이 부분은 PythonManager의 handleMessage에 통합될 수 있음
+    // 모델 정보 조회
+    ipcMain.handle('get-model-info', async () => {
+        return llmManager.getModelInfo();
+    });
 }
