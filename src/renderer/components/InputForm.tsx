@@ -5,7 +5,7 @@ import { setMode, openModal, ModalType, setLoading, setLoadingProgress, setAnswe
 
 export default function InputForm() {
     const { mode, answerList } = useAppSelector((state) => state.ui);
-    const { modelPath, modelName, modelFilename, pytorchUrl, llamaCppUrl } = useAppSelector((state) => state.settings);
+    const { modelPath, modelName, modelFilename } = useAppSelector((state) => state.settings);
     const [audioFile, setAudioFile] = useState<File | null>(null);
     const [questionText, setQuestionText] = useState('');
     const dispatch = useAppDispatch();
@@ -214,12 +214,13 @@ export default function InputForm() {
 
             // 파일 존재 확인
             let modelExists = false;
+
             try {
                 fs.accessSync(fullModelPath);
                 modelExists = true;
-                console.log('Model file exists');
+                console.log('모델 파일 있음');
             } catch {
-                console.log('Model file not found, need to download');
+                console.log('모델 파일 없음');
             }
 
             // 5. 모델이 없으면 다운로드
@@ -251,7 +252,7 @@ export default function InputForm() {
             }
 
             // 7. 문제 풀이
-            dispatch(setLoadingProgress({ message: '문제 풀이 중...', progress: 70 }));
+            dispatch(setLoadingProgress({ message: '문제 풀이 중..', progress: 70 }));
 
             const solveResult = await ipcRenderer.invoke('solve-problem', {
                 questionText
@@ -260,9 +261,11 @@ export default function InputForm() {
             if (solveResult.success) {
                 dispatch(setLoading(false));
 
+                const answerJson = JSON.parse(solveResult.answer);
+
                 console.log("문제 풀이 완료:", solveResult.answer);
 
-                dispatch(setAnswerList(solveResult.answer));
+                dispatch(setAnswerList(answerJson));
                 setQuestionText('');
             } else {
                 throw new Error(solveResult.error || '문제 풀이 실패');

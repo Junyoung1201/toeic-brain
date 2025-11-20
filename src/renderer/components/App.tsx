@@ -8,7 +8,7 @@ import SettingsModalContent from './SettingsModalContent';
 import LoadingOverlay from './LoadingOverlay';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { openModal, ModalType, setLoading } from '../store/ui';
-import { setPytorchUrl, setSettings } from '../store/settings';
+import { setSettings } from '../store/settings';
 
 export default function App() {
     const dispatch = useAppDispatch();
@@ -64,32 +64,19 @@ export default function App() {
                         recommendedFilename = 'Phi-3.5-mini-instruct-Q4_K_M.gguf';
                     }
 
-                    // GPU 이름에서 시리즈 확인 (예: RTX 3060 -> 30)
-                    const match = gpuName.match(/(?:GTX|RTX)\s*(\d{2})\d{2}/i);
-                    let pytorchUrl = '';
-
-                    if (match && match[1]) {
-                        const series = parseInt(match[1], 10);
-                        
-                        if (series >= 50) {
-                            pytorchUrl = 'https://download.pytorch.org/whl/nightly/cu128';
-                        } else if (series >= 10) {
-                            pytorchUrl = 'https://download.pytorch.org/whl/cu121';
-                        }
-                    }
-
                     const newSettings: any = {};
 
                     if (recommendedModel) {
                         newSettings.modelName = recommendedModel;
                     }
 
-                    if (recommendedFilename) newSettings.modelFilename = recommendedFilename;
-                    if (pytorchUrl) newSettings.pytorchUrl = pytorchUrl;
+                    if (recommendedFilename) {
+                        newSettings.modelFilename = recommendedFilename;
+                    }
 
                     if (Object.keys(newSettings).length > 0) {
                         dispatch(setSettings(newSettings));
-                        console.log(`Detected GPU: ${gpuName} (Series: ${match?.[1]}, VRAM: ${vram}MB). Auto-settings:`, newSettings);
+                        console.log(`Detected GPU: ${gpuName}, VRAM: ${vram}MB. Auto-settings:`, newSettings);
                     }
                 }
             } catch (error) {

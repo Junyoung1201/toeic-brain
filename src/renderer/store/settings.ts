@@ -4,16 +4,12 @@ interface SettingsState {
     modelPath: string;
     modelName: string;
     modelFilename: string;
-    pytorchUrl: string;
-    llamaCppUrl: string;
 }
 
 const initialState: SettingsState = {
     modelPath: '',
     modelName: '',
     modelFilename: '',
-    pytorchUrl: '',
-    llamaCppUrl: '',
 };
 
 const settings = createSlice({
@@ -22,12 +18,9 @@ const settings = createSlice({
     reducers: {
         setSettings(state, action: PayloadAction<Partial<SettingsState>>) {
             return { ...state, ...action.payload };
-        },
-        setPytorchUrl(state, action: PayloadAction<string>) {
-            state.pytorchUrl = action.payload;
         }
     }
 });
 
-export const { setSettings, setPytorchUrl } = settings.actions;
+export const { setSettings } = settings.actions;
 export default settings.reducer;

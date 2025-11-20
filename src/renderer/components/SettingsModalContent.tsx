@@ -5,10 +5,10 @@ import { setSettings } from '../store/settings';
 
 export default function SettingsModalContent() {
     const dispatch = useAppDispatch();
-    const { modelPath, modelName, pytorchUrl, llamaCppUrl } = useAppSelector(state => state.settings);
+    const { modelPath, modelName } = useAppSelector(state => state.settings);
 
     const handleSave = () => {
-        console.log('Settings Saved:', { modelPath, modelName, pytorchUrl, llamaCppUrl });
+        console.log('Settings Saved:', { modelPath, modelName });
         // TODO: Save to store or electron-store
     };
 
@@ -37,28 +37,6 @@ export default function SettingsModalContent() {
                     value={modelName}
                     onChange={(e) => handleChange('modelName', e.target.value)}
                     placeholder="Model Name"
-                />
-            </div>
-
-            <div className="settings-group">
-                <label htmlFor="pytorchUrl">pyTorch 다운로드 URL</label>
-                <input
-                    type="text"
-                    id="pytorchUrl"
-                    value={pytorchUrl}
-                    onChange={(e) => handleChange('pytorchUrl', e.target.value)}
-                    placeholder="https://download.pytorch.org/..."
-                />
-            </div>
-
-            <div className="settings-group">
-                <label htmlFor="llamaCppUrl">llama-cpp-python Wheel URL (Optional)</label>
-                <input
-                    type="text"
-                    id="llamaCppUrl"
-                    value={llamaCppUrl}
-                    onChange={(e) => handleChange('llamaCppUrl', e.target.value)}
-                    placeholder="https://abetlen.github.io/llama-cpp-python/whl/cu124"
                 />
             </div>
 
