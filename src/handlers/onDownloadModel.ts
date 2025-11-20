@@ -1,8 +1,14 @@
 import { downloadModel } from "../modules/model-download";
 import { logError } from "../utils/logger";
 
-export async function onDownloadModel(event: any, { type, repoId, saveDir, filename }: any) {
+interface I_DownloadModelParams {
+    type: string;
+    repoId: string;
+    saveDir: string;
+    filename: string;
+}
 
+export async function onDownloadModel(event: any, { type, repoId, saveDir, filename }: I_DownloadModelParams) {
     if (type === 'model') {
         try {
             const modelPath = await downloadModel(repoId, filename, saveDir);

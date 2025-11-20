@@ -116,7 +116,7 @@ export class LLM {
         try {
             WindowManager.sendToRenderer(WindowManager.getMainWindow(), 'solve-status', { message: 'Solving problem...' });
 
-            // 1단계: LLM이 자유롭게 답변하도록
+            // LLM 문제 풀이 시스템 프롬프트
             const firstPrompt = `You are an expert TOEIC test solver. Analyze the following TOEIC question and select the correct answer.
 
 ### Questions
@@ -135,7 +135,7 @@ Think carefully and provide your answer:`;
 
             logInfo('LLM first response:', firstResponse);
 
-            // 2단계: 응답을 JSON으로 변환 요청
+            // LLM이 방금 자신이 했던 응답을 JSON으로 변환
             const secondPrompt = `Convert your previous answer to this exact JSON format:
 {"question number": "answer letter", ...}
 

@@ -1,9 +1,8 @@
 import { LLM } from "../modules/llm";
 import { logError, logInfo } from "../utils/logger";
 
-export async function onLoadModel(event: any, args: any) {
-    const { modelPath } = args;
-
+export async function onLoadModel(event: any, { modelPath }: { modelPath: string }) {
+    
     try {
 
         logInfo('Loading model:', modelPath);

@@ -115,15 +115,15 @@ export default function InputForm() {
         ipcRenderer.on('solve-error', handleSolveError);
 
         return () => {
-            ipcRenderer.removeListener('model-download-progress', handleDownloadProgress);
-            ipcRenderer.removeListener('model-download-complete', handleDownloadComplete);
-            ipcRenderer.removeListener('model-download-error', handleDownloadError);
-            ipcRenderer.removeListener('model-load-status', handleModelLoadStatus);
-            ipcRenderer.removeListener('model-load-complete', handleModelLoadComplete);
-            ipcRenderer.removeListener('model-load-error', handleModelLoadError);
-            ipcRenderer.removeListener('solve-status', handleSolveStatus);
-            ipcRenderer.removeListener('solve-complete', handleSolveComplete);
-            ipcRenderer.removeListener('solve-error', handleSolveError);
+            ipcRenderer.removeAllListeners('model-download-progress');
+            ipcRenderer.removeAllListeners('model-download-complete');
+            ipcRenderer.removeAllListeners('model-download-error');
+            ipcRenderer.removeAllListeners('model-load-status');
+            ipcRenderer.removeAllListeners('model-load-complete');
+            ipcRenderer.removeAllListeners('model-load-error');
+            ipcRenderer.removeAllListeners('solve-status');
+            ipcRenderer.removeAllListeners('solve-complete');
+            ipcRenderer.removeAllListeners('solve-error');
         };
     }, [dispatch]);
 
@@ -145,6 +145,31 @@ export default function InputForm() {
             element.click();
         }
     }
+
+    const solveProblem = async (ipcRenderer: any) => {
+        dispatch(setLoadingProgress({ message: '문제 풀이 중...', progress: 70 }));
+
+        const { success, answer, error } = await ipcRenderer.invoke('solve-problem', {
+            questionText
+        });
+
+        if (success) {
+            try {
+                const answerJson = JSON.parse(answer);
+                console.log("문제 풀이 완료:", answerJson);
+                dispatch(setAnswerList(answerJson));
+            } catch (err) {
+                dispatch(setAnswerList({}));
+                console.error("LLM이 올바르지 않은 응답을 보냈습니다.");
+                console.error(err);
+            } finally {
+                setQuestionText('');
+                dispatch(setLoading(false));
+            }
+        } else {
+            throw new Error(error || '문제 풀이 실패');
+        }
+    };
 
     const handleSubmit = async () => {
         if (!questionText.trim()) {
@@ -170,30 +195,7 @@ export default function InputForm() {
             // 2. 모델이 로드되어 있으면 바로 문제 풀이
             if (modelInfo.isLoaded) {
                 console.log('모델 이미 로드되어 있음.');
-                dispatch(setLoadingProgress({ message: '문제 풀이 중...', progress: 50 }));
-
-                const { success, answer, error } = await ipcRenderer.invoke('solve-problem', {
-                    questionText
-                });
-
-                if (success) {
-
-                    try {
-                        const answerJson = JSON.parse(answer);
-
-                        console.log("문제 풀이 완료:", answerJson);
-                        dispatch(setAnswerList(answerJson));
-                    } catch (err) {
-                        dispatch(setAnswerList({}));
-                        console.error("LLM이 올바르지 않은 응답을 보냈습니다.");
-                        console.error(err);
-                    } finally {
-                        setQuestionText('');
-                        dispatch(setLoading(false));
-                    }
-                } else {
-                    throw new Error(error || '문제 풀이 실패');
-                }
+                await solveProblem(ipcRenderer);
                 return;
             }
 
@@ -225,7 +227,7 @@ export default function InputForm() {
 
             // 5. 모델이 없으면 다운로드
             if (!modelExists) {
-                dispatch(setLoadingProgress({ message: '모델 다운로드 시작...', progress: 10 }));
+                dispatch(setLoadingProgress({ message: '모델 다운로드 중..', progress: 10 }));
 
                 const downloadResult = await ipcRenderer.invoke('start-download', {
                     type: 'model',
@@ -240,7 +242,7 @@ export default function InputForm() {
             }
 
             // 6. 모델 로드
-            dispatch(setLoadingProgress({ message: '모델 로딩 중...', progress: 40 }));
+            dispatch(setLoadingProgress({ message: '모델 로딩 중..', progress: 40 }));
             console.log('Loading model from:', fullModelPath);
 
             const loadResult = await ipcRenderer.invoke('load-model', {
@@ -252,24 +254,7 @@ export default function InputForm() {
             }
 
             // 7. 문제 풀이
-            dispatch(setLoadingProgress({ message: '문제 풀이 중..', progress: 70 }));
-
-            const solveResult = await ipcRenderer.invoke('solve-problem', {
-                questionText
-            });
-
-            if (solveResult.success) {
-                dispatch(setLoading(false));
-
-                const answerJson = JSON.parse(solveResult.answer);
-
-                console.log("문제 풀이 완료:", solveResult.answer);
-
-                dispatch(setAnswerList(answerJson));
-                setQuestionText('');
-            } else {
-                throw new Error(solveResult.error || '문제 풀이 실패');
-            }
+            await solveProblem(ipcRenderer);
 
         } catch (error) {
             console.error('Submit failed:', error);

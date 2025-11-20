@@ -1,9 +1,7 @@
 import { LLM } from "../modules/llm";
 import { logError, logInfo } from "../utils/logger";
 
-export async function onSolveProblem(event: any, args: any) {
-    const { questionText } = args;
-
+export async function onSolveProblem(event: any, { questionText }: { questionText: string }) {
     try {
         logInfo("문제 푸는 중..");
 
