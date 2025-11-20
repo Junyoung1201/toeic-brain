@@ -2,7 +2,7 @@ import { AppDispatch } from "../store/hooks";
 import { setSettings } from "../store/settings";
 import { ModalType, openModal } from "../store/ui";
 
-export async function initializeEnvironment(dispatch: AppDispatch) {
+export async function initApp(dispatch: AppDispatch) {
     try {
         // @ts-ignore
         const { ipcRenderer } = window.require('electron');

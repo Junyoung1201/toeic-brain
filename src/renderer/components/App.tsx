@@ -9,6 +9,8 @@ import LoadingOverlay from './LoadingOverlay';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { openModal, ModalType, setLoading } from '../store/ui';
 import { setSettings } from '../store/settings';
+import {initApp} from '../modules/app-init';
+import { handleDebugKeyDown } from '../modules/debug';
 
 export default function App() {
     const dispatch = useAppDispatch();
@@ -23,105 +25,15 @@ export default function App() {
     };
 
     useEffect(() => {
-        const initializeEnvironment = async () => {
-            try {
-                // @ts-ignore
-                const { ipcRenderer } = window.require('electron');
-                
-                // 기본 모델 경로 설정
-                const defaultModelsPath = await ipcRenderer.invoke('get-default-models-path');
-                dispatch(setSettings({ modelPath: defaultModelsPath }));
 
-                // CUDA 및 GPU 확인
-                const { available, gpuName, vram } = await ipcRenderer.invoke('check-cuda');
-                
-                if (!available) {
-                    dispatch(openModal({
-                        title: '오류',
-                        content: <p>CUDA를 사용할 수 없습니다. NVIDIA GPU가 없거나 드라이버가 설치되지 않았을 수 있습니다.</p>,
-                        type: ModalType.ERROR
-                    }));
-                } 
-                
-                else if (gpuName) {
+        initApp(dispatch);
 
-                    // VRAM에 따른 모델 자동 설정
-                    // VRAM 단위는 MB임. 8GB ~= 8192MB
-                    let recommendedModel = '';
-                    const vramGb = vram / 1024;
+        window.addEventListener('keydown', e => handleDebugKeyDown(e, dispatch));
 
-                    let recommendedFilename = '';
-
-                    if (vramGb >= 16) {
-                        recommendedModel = 'bartowski/Qwen2.5-14B-Instruct-GGUF';
-                        recommendedFilename = 'Qwen2.5-14B-Instruct-Q4_K_M.gguf';
-                    } else if (vramGb >= 10) {
-                        recommendedModel = 'bartowski/Meta-Llama-3.1-8B-Instruct-GGUF';
-                        recommendedFilename = 'Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf';
-                    } else {
-                        // 8GB 이하 (또는 그 근처)
-                        recommendedModel = 'bartowski/Phi-3.5-mini-instruct-GGUF';
-                        recommendedFilename = 'Phi-3.5-mini-instruct-Q4_K_M.gguf';
-                    }
-
-                    const newSettings: any = {};
-
-                    if (recommendedModel) {
-                        newSettings.modelName = recommendedModel;
-                    }
-
-                    if (recommendedFilename) {
-                        newSettings.modelFilename = recommendedFilename;
-                    }
-
-                    if (Object.keys(newSettings).length > 0) {
-                        dispatch(setSettings(newSettings));
-                        console.log(`Detected GPU: ${gpuName}, VRAM: ${vram}MB. Auto-settings:`, newSettings);
-                    }
-                }
-            } catch (error) {
-                console.error('Failed to initialize environment:', error);
-            }
-        };
-
-        initializeEnvironment();
-
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'F1') {
-                e.preventDefault();
-                dispatch(openModal({
-                    title: 'Info 모달',
-                    content: <p>기본 정보 모달입니다.</p>,
-                    type: ModalType.INFO
-                }));
-            } 
-            
-            else if (e.key === 'F2') {
-                e.preventDefault();
-                dispatch(openModal({
-                    title: 'Error 모달',
-                    content: <p>오류가 발생했습니다!</p>,
-                    type: ModalType.ERROR
-                }));
-            } 
-            
-            else if (e.key === 'F3') {
-                e.preventDefault();
-                dispatch(openModal({
-                    title: 'Warning 모달',
-                    content: <p>경고 메시지입니다.</p>,
-                    type: ModalType.WARN
-                }));
-            } 
-            
-            else if (e.key === 'F4') {
-                e.preventDefault();
-                dispatch(setLoading(!isLoading));
-            }
-        };
-
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
+        return () => {
+            window.removeEventListener('keydown', e => handleDebugKeyDown(e, dispatch));
+        }
+        
     }, [dispatch, isLoading]);
 
     return (

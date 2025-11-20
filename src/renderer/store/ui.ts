@@ -86,9 +86,13 @@ const ui = createSlice({
             state.modalTitle = null;
             state.modalContent = null;
             state.modalType = ModalType.INFO;
+        },
+        toggleLoadingScreen(state) {
+            state.isLoading = !state.isLoading;
         }
     }
 })
 
-export const { setAnswerList, clearAnswerList, setMode, openModal, closeModal, setLoading, setLoadingProgress } = ui.actions;
+
+export const { setAnswerList, clearAnswerList, setMode, openModal, closeModal, setLoading, setLoadingProgress, toggleLoadingScreen } = ui.actions;
 export default ui.reducer;
