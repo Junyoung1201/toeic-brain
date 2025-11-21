@@ -4,6 +4,7 @@ import { registerIpcHandlers } from './ipc';
 import { LLM } from './modules/llm';
 import { Whisper } from './modules/whisper';
 import { logInfo } from './utils/logger';
+import {__dirname} from './constants';
 
 // Electron 보안 경고 숨기기
 process.env['ELECTRON_DISABLE_SECURITY_WARNINGS'] = 'true';
@@ -16,6 +17,7 @@ app.whenReady().then(() => {
 
     console.clear();
     logInfo("Toeic Brain Started.");
+    logInfo("  > __dirname: "+__dirname)
 
     // 메인 윈도우 생성
     WindowManager.createWindow();

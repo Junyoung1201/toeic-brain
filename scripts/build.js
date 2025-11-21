@@ -11,10 +11,6 @@ async function buildAll() {
     process.env.BUILD_TARGET = 'main';
     await build({ configFile: path.resolve(__dirname, '../vite.config.ts') });
 
-    console.log('Worker 프로세스 빌드 중...');
-    process.env.BUILD_TARGET = 'worker';
-    await build({ configFile: path.resolve(__dirname, '../vite.config.ts') });
-
     console.log('렌더러 프로세스 빌드 중...');
     process.env.BUILD_TARGET = 'renderer';
     await build({ configFile: path.resolve(__dirname, '../vite.config.ts') });

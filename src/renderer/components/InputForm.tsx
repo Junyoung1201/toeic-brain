@@ -283,9 +283,9 @@ export default function InputForm() {
                 dispatch(setLoading({ loading: true, message: 'Whisper 모델 로딩 중..' }));
                 
                 const loadResult = await ipcRenderer.invoke('load-whisper-model', {
-                    modelName: 'Xenova/whisper-large-v3',
-                    device: 'cpu',
-                    quantized: true
+                    modelName: 'large-v3',
+                    device: 'auto',
+                    computeType: 'auto'
                 });
 
                 if (!loadResult.success) {
@@ -299,7 +299,7 @@ export default function InputForm() {
             const transcribeResult = await ipcRenderer.invoke('transcribe-audio', {
                 //@ts-ignore
                 audioPath: audioFile!.path,
-                language: 'english',
+                language: 'en',
                 task: 'transcribe',
                 return_timestamps: false
             });

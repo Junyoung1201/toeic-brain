@@ -3,8 +3,8 @@ import { logError, logInfo } from "../utils/logger";
 
 interface LoadWhisperModelParams {
     modelName?: string;
-    device?: 'cpu' | 'gpu';
-    quantized?: boolean;
+    device?: 'cpu' | 'cuda' | 'auto';
+    computeType?: 'int8' | 'float16' | 'float32' | 'auto';
 }
 
 export async function onLoadWhisperModel(
@@ -12,14 +12,14 @@ export async function onLoadWhisperModel(
     params: LoadWhisperModelParams = {}
 ) {
     try {
-        const { modelName, device, quantized } = params;
+        const { modelName, device, computeType } = params;
 
-        logInfo('Loading Whisper model:', modelName || 'default (Xenova/whisper-large-v3)');
+        logInfo('Loading Whisper model:', modelName || 'default (large-v3)');
         
         await Whisper.loadModel({
             modelName,
             device,
-            quantized
+            computeType
         });
 
         return { success: true };
