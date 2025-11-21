@@ -49,7 +49,7 @@ export default defineConfig(({ command, mode }) => {
         outDir: 'dist',
         lib: {
           entry: 'src/main.ts',
-          formats: ['cjs'],
+          formats: ['es'],
           fileName: () => 'main.js',
         },
         rollupOptions: {
@@ -59,7 +59,9 @@ export default defineConfig(({ command, mode }) => {
             ...builtinModules,
             'node-llama-cpp',
             /^@node-llama-cpp\/.*/,
-            '@xenova/transformers'
+            '@xenova/transformers',
+            '@ffmpeg-installer/ffmpeg',
+            'wavefile'
           ],
           output: {
             entryFileNames: '[name].js',

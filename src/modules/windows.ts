@@ -1,5 +1,6 @@
 import { BrowserWindow } from 'electron';
 import * as path from 'path';
+import {__dirname} from '../constants';
 
 export class WindowManager {
     private static mainWindow: BrowserWindow | null = null;
@@ -20,8 +21,7 @@ export class WindowManager {
                 webSecurity: false,
             },
         });
-
-        // 개발 환경에서는 localhost 사용, 프로덕션에서는 파일 로드
+        
         if (process.env.NODE_ENV === 'development') {
             WindowManager.mainWindow.loadURL('http://localhost:8080');
         } else {
@@ -30,7 +30,6 @@ export class WindowManager {
 
         WindowManager.mainWindow.setMenuBarVisibility(false);
 
-        // 개발 모드에서만 DevTools 열기
         if (process.env.NODE_ENV === 'development') {
             WindowManager.mainWindow.webContents.openDevTools({ mode: 'detach' });
         }

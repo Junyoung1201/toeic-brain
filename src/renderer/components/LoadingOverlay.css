@@ -40,31 +40,3 @@
     font-size: 0.9rem;
     color: #ccc;
 }
-
-.progress-container {
-    width: 300px;
-    height: 30px;
-    background-color: rgba(255, 255, 255, 0.2);
-    border-radius: 15px;
-    margin: 15px auto;
-    position: relative;
-    overflow: hidden;
-}
-
-.progress-bar {
-    height: 100%;
-    background: linear-gradient(90deg, #4CAF50, #8BC34A);
-    border-radius: 15px;
-    transition: width 0.3s ease;
-}
-
-.progress-text {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-weight: bold;
-    font-size: 0.9rem;
-    color: white;
-    text-shadow: 0 1px 3px rgba(0,0,0,0.5);
-}

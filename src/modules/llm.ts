@@ -34,11 +34,11 @@ export class LLM {
      */
     static async loadModel(config: LLMConfig): Promise<void> {
         if (LLM.isLoading) {
-            throw new Error('model already loading');
+            throw new Error('모델이 이미 로드 중입니다.');
         }
 
         if (LLM.model && LLM.modelPath === config.modelPath) {
-            logInfo('model already loaded');
+            logInfo('모델이 이미 로드되어 있습니다.');
             return;
         }
 
@@ -48,7 +48,7 @@ export class LLM {
 
             // 파일 존재 확인
             if (!fs.existsSync(modelPath)) {
-                throw new Error(`Model file not found: ${modelPath}`);
+                throw new Error(`모델 파일을 찾을 수 없습니다: ${modelPath}`);
             }
 
             const fileSize = fs.statSync(modelPath).size;
@@ -56,23 +56,23 @@ export class LLM {
             logInfo(`File size: ${(fileSize / (1024 ** 3)).toFixed(2)} GB`);
 
             WindowManager.sendToRenderer(WindowManager.getMainWindow(), 'model-load-status', {
-                message: 'Loading LLM model..',
+                message: 'LLM 모델 로드 중..',
                 path: modelPath,
                 size: fileSize
             });
 
             // node-llama-cpp 동적 로드
-            logInfo('Loading node-llama-cpp module..');
+            logInfo('node-llama-cpp 모듈 로드 중..');
             const { getLlama, LlamaChatSession } = await LLM.loadLlamaModule();
 
             // llama.cpp 인스턴스 가져오기
-            logInfo('Initializing llama.cpp..');
+            logInfo('llama.cpp 초기화 중..');
             const llama = await getLlama();
 
             // 모델 로드
-            logInfo('Loading GGUF model..');
+            logInfo('GGUF 모델 로드 중..');
             WindowManager.sendToRenderer(WindowManager.getMainWindow(), 'model-load-status', {
-                message: 'Loading GGUF model with llama.cpp..'
+                message: 'llama.cpp로 GGUF 모델 로드 중..'
             });
 
             LLM.model = await llama.loadModel({
@@ -80,24 +80,24 @@ export class LLM {
             });
 
             // 컨텍스트 생성
-            logInfo('Creating model context..');
+            logInfo('모델 컨텍스트 생성 중..');
             LLM.context = await LLM.model.createContext({
                 contextSize: maxTokens,
             });
 
             // 세션 생성
-            logInfo('Creating chat session..');
+            logInfo('채팅 세션 생성 중..');
             LLM.session = new LlamaChatSession({
                 contextSequence: LLM.context.getSequence(),
             });
 
             LLM.modelPath = modelPath;
 
-            logInfo('Model loaded successfully');
+            logInfo('모델 로드 완료');
             WindowManager.sendToRenderer(WindowManager.getMainWindow(), 'model-load-complete', { path: modelPath });
 
         } catch (error) {
-            logError('Failed to load model:', error);
+            logError('모델 로드 실패:', error);
             WindowManager.sendToRenderer(WindowManager.getMainWindow(), 'model-load-error', { error: String(error) });
             throw error;
         } finally {
@@ -110,12 +110,11 @@ export class LLM {
      */
     static async solveProblem(problemText: string): Promise<string> {
         if (!LLM.session) {
-            throw new Error('Model not loaded. Please load a model first.');
+            throw new Error('모델이 로드되지 않았습니다. 먼저 모델을 로드하세요.');
         }
 
         try {
-            WindowManager.sendToRenderer(WindowManager.getMainWindow(), 'solve-status', { message: 'Solving problem...' });
-
+            WindowManager.sendToRenderer(WindowManager.getMainWindow(), 'solve-status', { message: '문제 풀이 중..' });
             // LLM 문제 풀이 시스템 프롬프트
             const firstPrompt = `You are an expert TOEIC test solver. Analyze the following TOEIC question and select the correct answer.
 
@@ -124,7 +123,10 @@ ${problemText}
 
 Think carefully and provide your answer:`;
 
-            logInfo('Step 1: Getting answer from LLM...');
+            logInfo('');
+            logInfo('[LLM한테 요청한 프롬프트]');
+            logInfo(firstPrompt);
+            logInfo('');
 
             const firstResponse = await LLM.session.prompt(firstPrompt, {
                 //maxTokens: 512,
@@ -133,7 +135,9 @@ Think carefully and provide your answer:`;
                 topP: 0.1,
             });
 
-            logInfo('LLM first response:', firstResponse);
+            logInfo('[LLM 응답]');
+            logInfo(firstResponse);
+            logInfo('');
 
             // LLM이 방금 자신이 했던 응답을 JSON으로 변환
             const secondPrompt = `Convert your previous answer to this exact JSON format:
@@ -151,7 +155,7 @@ answer letter is (A, B, C, or D). Output only the JSON, nothing else.`;
             });
 
             logInfo('');
-            logInfo('[LLM JSON Response]');
+            logInfo('[LLM JSON 응답]');
             logInfo(jsonResponse);
             logInfo('');
 
@@ -163,14 +167,14 @@ answer letter is (A, B, C, or D). Output only the JSON, nothing else.`;
                 answers = JSON.parse(jsonResponse) as { [questioNumber: string]: string };
 
             } catch (parseError) {
-                logError('JSON parse error:', parseError);
+                logError('JSON 파싱 실패:', parseError);
             }
 
             WindowManager.sendToRenderer(WindowManager.getMainWindow(), 'solve-complete', answers);
             return JSON.stringify(answers);
 
         } catch (error) {
-            logError('Failed to solve problem:', error);
+            logError('문제 풀이 실패:', error);
             WindowManager.sendToRenderer(WindowManager.getMainWindow(), 'solve-error', { error: String(error) });
             throw error;
         }
@@ -194,7 +198,7 @@ answer letter is (A, B, C, or D). Output only the JSON, nothing else.`;
         }
 
         LLM.modelPath = null;
-        logInfo('Model unloaded');
+        logInfo('모델 언로드됨.');
     }
 
     /**

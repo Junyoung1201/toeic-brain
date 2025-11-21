@@ -2,6 +2,7 @@ import { app, BrowserWindow } from 'electron';
 import { WindowManager } from './modules/windows';
 import { registerIpcHandlers } from './ipc';
 import { LLM } from './modules/llm';
+import { Whisper } from './modules/whisper';
 import { logInfo } from './utils/logger';
 
 // Electron 보안 경고 숨기기
@@ -30,6 +31,7 @@ app.whenReady().then(() => {
 // 모든 윈도우 닫힘 시 처리
 app.on('window-all-closed', () => {
     LLM.unloadModel();
+    Whisper.unloadModel();
     if (process.platform !== 'darwin') {
         app.quit();
     }

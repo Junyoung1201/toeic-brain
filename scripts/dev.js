@@ -1,7 +1,12 @@
-const { spawn } = require('child_process');
-const { createServer, build } = require('vite');
-const path = require('path');
-const electron = require('electron');
+import { spawn } from 'child_process';
+import { createServer, build } from 'vite';
+import path from 'path';
+import electron from 'electron';
+import { fileURLToPath } from 'url';
+import chokidar from 'chokidar';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 let electronProcess = null;
 
@@ -18,7 +23,6 @@ async function startDev() {
         startElectron();
 
         // 프로세스 파일 변경 감지
-        const chokidar = require('chokidar');
         const watcher = chokidar.watch('src/main.ts', {
             ignoreInitial: true,
         });

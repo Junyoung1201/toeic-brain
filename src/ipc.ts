@@ -4,7 +4,10 @@ import { onDownloadModel } from './handlers/onDownloadModel';
 import { onSolveProblem } from './handlers/onSolveProblem';
 import {onLoadModel} from './handlers/onLoadModel';
 import {onCheckCuda} from './handlers/onCheckCuda';
+import { onLoadWhisperModel } from './handlers/onLoadWhisperModel';
+import { onTranscribeAudio } from './handlers/onTranscribeAudio';
 import { LLM } from './modules/llm';
+import { Whisper } from './modules/whisper';
 import { MODEL_DOWNLOAD_PATH_DEF } from './constants';
 
 export function registerIpcHandlers(): void {
@@ -28,4 +31,13 @@ export function registerIpcHandlers(): void {
 
     // 모델 정보 조회
     ipcMain.handle('get-model-info', LLM.getModelInfo);
+
+    // Whisper 모델 로드
+    ipcMain.handle('load-whisper-model', onLoadWhisperModel);
+
+    // 오디오 변환
+    ipcMain.handle('transcribe-audio', onTranscribeAudio);
+
+    // Whisper 모델 정보 조회
+    ipcMain.handle('get-whisper-model-info', Whisper.getModelInfo);
 }

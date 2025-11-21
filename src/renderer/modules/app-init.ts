@@ -2,10 +2,12 @@ import { AppDispatch } from "../store/hooks";
 import { setSettings } from "../store/settings";
 import { ModalType, openModal } from "../store/ui";
 
+
 export async function initApp(dispatch: AppDispatch) {
+
+    const {ipcRenderer} = window.require("electron");   
+    
     try {
-        // @ts-ignore
-        const { ipcRenderer } = window.require('electron');
 
         // 기본 모델 경로 설정
         const defaultModelsPath = await ipcRenderer.invoke('get-default-models-path');
@@ -25,7 +27,8 @@ export async function initApp(dispatch: AppDispatch) {
         else if (gpuName) {
 
             // VRAM에 따른 모델 자동 설정
-            // VRAM 단위는 MB임. 8GB ~= 8192MB
+            // VRAM 단위는 MB임. 8GB = 8192MB
+            
             let recommendedModel = '';
             const vramGb = vram / 1024;
 
@@ -59,10 +62,10 @@ export async function initApp(dispatch: AppDispatch) {
 
             if (Object.keys(newSettings).length > 0) {
                 dispatch(setSettings(newSettings));
-                console.log(`Detected GPU: ${gpuName}, VRAM: ${vram}MB. Auto-settings:`, newSettings);
+                console.log(`감지된 GPU: ${gpuName}, VRAM: ${vram}MB. 설정:`, newSettings);
             }
         }
     } catch (error) {
-        console.error('Failed to initialize environment:', error);
+        console.error('초기화 실패:', error);
     }
 };

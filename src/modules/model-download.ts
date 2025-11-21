@@ -20,7 +20,7 @@ export async function downloadModel(repoId: string, filename: string, saveDir: s
 
             // 이미 파일이 있으면 바로 반환
             if (fs.existsSync(savePath)) {
-                logInfo(`Model already exists: ${savePath}`);
+                logInfo(`모델이 이미 존재합니다: ${savePath}`);
                 WindowManager.sendToRenderer(WindowManager.getMainWindow(), 'model-download-complete', { path: savePath });
                 resolve(savePath);
                 return;
@@ -29,8 +29,8 @@ export async function downloadModel(repoId: string, filename: string, saveDir: s
             // Hugging Face URL 구성
             const url = `https://huggingface.co/${repoId}/resolve/main/${filename}`;
 
-            logInfo(`Downloading model from: ${url}`);
-            WindowManager.sendToRenderer(WindowManager.getMainWindow(), 'model-download-status', { message: 'Starting download...' });
+            logInfo(`모델 다운로드 중: ${url}`);
+            WindowManager.sendToRenderer(WindowManager.getMainWindow(), 'model-download-status', { message: '다운로드 시작' });
 
             const file = fs.createWriteStream(savePath);
             let downloadedSize = 0;
@@ -41,7 +41,7 @@ export async function downloadModel(repoId: string, filename: string, saveDir: s
                 if (response.statusCode === 302 || response.statusCode === 301) {
                     const redirectUrl = response.headers.location;
                     if (!redirectUrl) {
-                        reject(new Error('Redirect without location'));
+                        reject(new Error('리다이렉트 위치가 없습니다.'));
                         return;
                     }
 
@@ -63,7 +63,7 @@ export async function downloadModel(repoId: string, filename: string, saveDir: s
 
                         file.on('finish', () => {
                             file.close();
-                            logInfo(`Model downloaded successfully: ${savePath}`);
+                            logInfo(`모델 다운로드 완료: ${savePath}`);
                             WindowManager.sendToRenderer(WindowManager.getMainWindow(), 'model-download-complete', { path: savePath });
                             resolve(savePath);
                         });
@@ -76,7 +76,7 @@ export async function downloadModel(repoId: string, filename: string, saveDir: s
                 }
 
                 if (response.statusCode !== 200) {
-                    reject(new Error(`Failed to download: ${response.statusCode}`));
+                    reject(new Error(`모델 다운로드 실패: ${response.statusCode} (${response.statusMessage})`));
                     return;
                 }
 
@@ -97,7 +97,7 @@ export async function downloadModel(repoId: string, filename: string, saveDir: s
 
                 file.on('finish', () => {
                     file.close();
-                    logInfo(`Model downloaded successfully: ${savePath}`);
+                    logInfo(`모델 다운로드 완료: ${savePath}`);
                     WindowManager.sendToRenderer(WindowManager.getMainWindow(), 'model-download-complete', { path: savePath });
                     resolve(savePath);
                 });
@@ -105,7 +105,7 @@ export async function downloadModel(repoId: string, filename: string, saveDir: s
 
             request.on('error', (err) => {
                 fs.unlinkSync(savePath);
-                logError('Download error:', err);
+                logError('다운로드 실패:', err);
                 WindowManager.sendToRenderer(WindowManager.getMainWindow(), 'model-download-error', { error: err.message });
                 reject(err);
             });
@@ -116,7 +116,7 @@ export async function downloadModel(repoId: string, filename: string, saveDir: s
             });
 
         } catch (error) {
-            logError('Download error:', error);
+            logError('다운로드 실패:', error);
             WindowManager.sendToRenderer(WindowManager.getMainWindow(), 'model-download-error', { error: String(error) });
             reject(error);
         }
