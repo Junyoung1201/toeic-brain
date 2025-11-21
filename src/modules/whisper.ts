@@ -1,14 +1,8 @@
-import { BrowserWindow } from 'electron';
-import { pipeline, AutomaticSpeechRecognitionPipeline } from '@xenova/transformers';
+import { Worker } from 'worker_threads';
 import { logInfo, logError } from '../utils/logger';
 import { WindowManager } from './windows';
-import wavefileModule from 'wavefile';
-import * as fs from 'fs';
 import * as path from 'path';
-import { execSync } from 'child_process';
-import ffmpegPath from '@ffmpeg-installer/ffmpeg';
-
-const { WaveFile } = wavefileModule as any;
+import {__dirname} from '../constants';
 
 interface WhisperConfig {
     modelName?: string;
@@ -33,58 +27,117 @@ interface TranscriptResult {
 }
 
 export class Whisper {
-    private static transcriber: AutomaticSpeechRecognitionPipeline | null = null;
+    private static worker: Worker | null = null;
     private static modelName: string | null = null;
     private static isLoading: boolean = false;
+    private static pendingRequests: Map<string, { resolve: Function; reject: Function }> = new Map();
 
     /**
-     * 오디오 파일을 Float32Array로 변환
+     * Worker 초기화
      */
-    private static async readAudioFile(audioPath: string): Promise<Float32Array> {
-        const ext = path.extname(audioPath).toLowerCase();
-        let wavPath = audioPath;
-        let tempFile = false;
-
-        // MP3나 다른 포맷이면 WAV로 변환
-        if (ext !== '.wav') {
-            logInfo(`${ext}(을)를 WAV로 변환 중..`);
-            wavPath = audioPath.replace(ext, '_temp.wav');
-            tempFile = true;
-
-            try {
-                // FFmpeg를 사용하여 WAV로 변환 (16kHz mono)
-                const ffmpeg = ffmpegPath.path;
-                execSync(`"${ffmpeg}" -i "${audioPath}" -ar 16000 -ac 1 -f wav "${wavPath}" -y`, {
-                    stdio: 'pipe'
-                });
-            } catch (error) {
-                logError('FFmpeg 변환 실패:', error);
-                throw new Error(`오디오 파일 변환 실패: ${error}`);
-            }
+    private static initWorker(): void {
+        if (Whisper.worker) {
+            return;
         }
 
-        try {
-            // WAV 파일 읽기
-            const buffer = fs.readFileSync(wavPath);
-            const wav = new WaveFile(buffer);
+        const workerPath = path.join(__dirname, 'workers', 'whisper-worker.js');
+        Whisper.worker = new Worker(workerPath);
 
-            // 16-bit PCM을 Float32Array로 변환
-            wav.toBitDepth('32f');
-            const rawSamples = wav.getSamples(false, Float32Array);
-            const samples = rawSamples instanceof Float32Array ? rawSamples : new Float32Array(rawSamples as ArrayLike<number>);
+        Whisper.worker.on('message', (message: any) => {
+            Whisper.handleWorkerMessage(message);
+        });
 
-            // 임시 파일 삭제
-            if (tempFile && fs.existsSync(wavPath)) {
-                fs.unlinkSync(wavPath);
+        Whisper.worker.on('error', (error: Error) => {
+            logError('Worker 오류:', error);
+        });
+
+        Whisper.worker.on('exit', (code: number) => {
+            if (code !== 0) {
+                logError(`Worker 비정상 종료: ${code}`);
             }
+            Whisper.worker = null;
+        });
+    }
 
-            return samples;
-        } catch (error) {
-            // 임시 파일 정리
-            if (tempFile && fs.existsSync(wavPath)) {
-                fs.unlinkSync(wavPath);
-            }
-            throw error;
+    /**
+     * Worker 메시지 핸들러
+     */
+    private static handleWorkerMessage(message: any): void {
+        const { type, data } = message;
+
+        switch (type) {
+            case 'ready':
+                logInfo('Whisper Worker 준비 완료');
+                break;
+
+            case 'load-status':
+                logInfo(data.message);
+                WindowManager.sendToRenderer(WindowManager.getMainWindow(), 'whisper-load-status', data);
+                break;
+
+            case 'load-progress':
+                logInfo(`Whisper 모델 다운로드 중: ${data.percentage}%`);
+                WindowManager.sendToRenderer(WindowManager.getMainWindow(), 'whisper-load-progress', data);
+                break;
+
+            case 'load-complete':
+                logInfo('Whisper 모델 로드 완료');
+                Whisper.isLoading = false;
+                WindowManager.sendToRenderer(WindowManager.getMainWindow(), 'whisper-load-complete', data);
+                const loadResolve = Whisper.pendingRequests.get('load');
+                if (loadResolve) {
+                    loadResolve.resolve();
+                    Whisper.pendingRequests.delete('load');
+                }
+                break;
+
+            case 'load-error':
+                logError('Whisper 모델 로드 실패:', data.error);
+                Whisper.isLoading = false;
+                WindowManager.sendToRenderer(WindowManager.getMainWindow(), 'whisper-load-error', data);
+                const loadReject = Whisper.pendingRequests.get('load');
+                if (loadReject) {
+                    loadReject.reject(new Error(data.error));
+                    Whisper.pendingRequests.delete('load');
+                }
+                break;
+
+            case 'transcribe-status':
+                logInfo(data.message);
+                WindowManager.sendToRenderer(WindowManager.getMainWindow(), 'whisper-transcribe-status', data);
+                break;
+
+            case 'transcribe-complete':
+                logInfo('오디오 인식 완료');
+                WindowManager.sendToRenderer(WindowManager.getMainWindow(), 'whisper-transcribe-complete', data);
+                const transcribeResolve = Whisper.pendingRequests.get('transcribe');
+                if (transcribeResolve) {
+                    transcribeResolve.resolve(data);
+                    Whisper.pendingRequests.delete('transcribe');
+                }
+                break;
+
+            case 'transcribe-error':
+                logError('오디오 변환 실패:', data.error);
+                WindowManager.sendToRenderer(WindowManager.getMainWindow(), 'whisper-transcribe-error', data);
+                const transcribeReject = Whisper.pendingRequests.get('transcribe');
+                if (transcribeReject) {
+                    transcribeReject.reject(new Error(data.error));
+                    Whisper.pendingRequests.delete('transcribe');
+                }
+                break;
+
+            case 'unload-complete':
+                logInfo('Whisper 모델 언로드 완료');
+                break;
+
+            case 'log':
+                logInfo('[Worker]', data.message);
+                break;
+
+            case 'error':
+                logError('Worker 에러:', data.error);
+                break;
         }
     }
 
@@ -103,84 +156,29 @@ export class Whisper {
         } = config;
 
         // 이미 같은 모델이 로드되어 있으면 스킵
-        if (Whisper.transcriber && Whisper.modelName === modelName) {
+        if (Whisper.worker && Whisper.modelName === modelName) {
             logInfo('Whisper 모델이 이미 로드되어 있습니다.');
             return;
         }
 
-        try {
-            Whisper.isLoading = true;
+        Whisper.isLoading = true;
+        Whisper.modelName = modelName;
 
-            logInfo(`Whisper 모델 로드 중: ${modelName} (장치: ${device}, 양자화: ${quantized})`);
+        // Worker 초기화
+        Whisper.initWorker();
 
-            WindowManager.sendToRenderer(WindowManager.getMainWindow(), 'whisper-load-status', {
-                message: 'Whisper 모델 로드 중..',
-                modelName
-            });
+        return new Promise<void>((resolve, reject) => {
+            Whisper.pendingRequests.set('load', { resolve, reject });
 
-            // 파일별 다운로드 진행률 추적
-            const fileProgress: { [key: string]: { loaded: number; total: number } } = {};
-            let lastReportedPercentage = 0;
-
-            // transformers.js의 pipeline을 사용하여 모델 로드
-            Whisper.transcriber = await pipeline(
-                'automatic-speech-recognition',
-                modelName,
-                {
-                    quantized,
-
-                    // 진행 상황 콜백
-                    progress_callback: (progress: any) => {
-                        if (progress.status === 'progress' && progress.file) {
-                            // 각 파일의 진행률 업데이트
-                            fileProgress[progress.file] = {
-                                loaded: progress.loaded,
-                                total: progress.total
-                            };
-
-                            // 전체 진행률 계산
-                            let totalLoaded = 0;
-                            let totalSize = 0;
-                            Object.values(fileProgress).forEach(file => {
-                                totalLoaded += file.loaded;
-                                totalSize += file.total;
-                            });
-
-                            const percentage = totalSize > 0
-                                ? Math.round((totalLoaded / totalSize) * 100)
-                                : 0;
-
-                            // 진행률이 변경되었을 때만 업데이트 (너무 자주 업데이트 방지)
-                            if (Math.abs(percentage - lastReportedPercentage) >= 1) {
-                                lastReportedPercentage = percentage;
-                                logInfo(`Whisper 모델 다운로드 중: ${percentage}%`);
-                                WindowManager.sendToRenderer(WindowManager.getMainWindow(), 'whisper-load-progress', {
-                                    percentage,
-                                    loaded: totalLoaded,
-                                    total: totalSize
-                                });
-                            }
-                        }
-                    }
+            // Worker에 모델 로드 요청
+            Whisper.worker?.postMessage({
+                type: 'load-model',
+                data: {
+                    modelName,
+                    quantized
                 }
-            );
-
-            Whisper.modelName = modelName;
-            logInfo('Whisper 모델 로드 완료');
-
-            WindowManager.sendToRenderer(WindowManager.getMainWindow(), 'whisper-load-complete', {
-                modelName
             });
-
-        } catch (error) {
-            logError('Whisper 모델 로드 실패:', error);
-            WindowManager.sendToRenderer(WindowManager.getMainWindow(), 'whisper-load-error', {
-                error: String(error)
-            });
-            throw error;
-        } finally {
-            Whisper.isLoading = false;
-        }
+        });
     }
 
     /**
@@ -190,69 +188,53 @@ export class Whisper {
         audioPath: string,
         options: TranscribeOptions = {}
     ): Promise<TranscriptResult> {
-        if (!Whisper.transcriber) {
+        if (!Whisper.worker) {
             throw new Error('Whisper 모델이 로드되지 않았습니다.');
         }
 
-        try {
-            logInfo(`오디오 변환 중: ${audioPath}`);
+        const {
+            language = 'english',
+            task = 'transcribe',
+            chunk_length_s = 30,
+            stride_length_s = 5,
+            return_timestamps = false
+        } = options;
 
-            const {
-                language = 'english',
-                task = 'transcribe',
-                chunk_length_s = 30,
-                stride_length_s = 5,
-                return_timestamps = false
-            } = options;
+        logInfo(`오디오 변환 중: ${audioPath}`);
 
-            WindowManager.sendToRenderer(WindowManager.getMainWindow(), 'whisper-transcribe-status', {
-                message: '오디오 변환 중..',
-                audioPath
+        return new Promise<TranscriptResult>((resolve, reject) => {
+            Whisper.pendingRequests.set('transcribe', { resolve, reject });
+
+            // Worker에 음성 인식 요청
+            Whisper.worker?.postMessage({
+                type: 'transcribe',
+                data: {
+                    audioPath,
+                    language,
+                    task,
+                    chunk_length_s,
+                    stride_length_s,
+                    return_timestamps
+                }
             });
-
-            // 오디오 파일을 Float32Array로 읽기
-            logInfo('오디오 파일 읽는 중');
-            const audioData = await Whisper.readAudioFile(audioPath);
-
-            logInfo('오디오 인식 시작');
-            
-            // 음성 인식 실행 (오디오 데이터를 직접 전달)
-            const result = await Whisper.transcriber(audioData, {
-                language,
-                task,
-                chunk_length_s,
-                stride_length_s,
-                return_timestamps
-            });
-
-            logInfo('오디오 인식 완료');
-
-            const transcriptResult = Array.isArray(result) ? result[0] : result;
-            const resultText = transcriptResult.text;
-
-            WindowManager.sendToRenderer(WindowManager.getMainWindow(), 'whisper-transcribe-complete', {
-                text: resultText
-            });
-
-            return transcriptResult as TranscriptResult;
-
-        } catch (error) {
-            
-            logError('오디오 변환 실패:', error);
-            WindowManager.sendToRenderer(WindowManager.getMainWindow(), 'whisper-transcribe-error', {
-                error: String(error)
-            });
-            throw error;
-        }
+        });
     }
 
     /**
      * 모델 언로드
      */
     static unloadModel(): void {
-        if (Whisper.transcriber) {
+        if (Whisper.worker) {
             logInfo('Whisper 모델 언로드 중');
-            Whisper.transcriber = null;
+            
+            Whisper.worker.postMessage({
+                type: 'unload',
+                data: {}
+            });
+
+            // Worker 종료
+            Whisper.worker.terminate();
+            Whisper.worker = null;
             Whisper.modelName = null;
         }
     }
@@ -262,7 +244,7 @@ export class Whisper {
      */
     static getModelInfo(): { loaded: boolean; modelName: string | null } {
         return {
-            loaded: Whisper.transcriber !== null,
+            loaded: Whisper.worker !== null,
             modelName: Whisper.modelName
         };
     }

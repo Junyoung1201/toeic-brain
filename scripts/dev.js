@@ -20,16 +20,37 @@ async function startDev() {
 
         await server.listen();
 
+        // Worker 빌드
+        console.log('Worker 빌드 중');
+        process.env.BUILD_TARGET = 'worker';
+        await build({ configFile: path.resolve(__dirname, '../vite.config.ts') });
+
         startElectron();
 
-        // 프로세스 파일 변경 감지
-        const watcher = chokidar.watch('src/main.ts', {
+        // 메인 프로세스 파일 변경 감지
+        const mainWatcher = chokidar.watch('src/main.ts', {
             ignoreInitial: true,
         });
 
-        watcher.on('change', async () => {
-            console.log('프로세스 파일 변경됨. 다시 빌드 중');
+        mainWatcher.on('change', async () => {
+            console.log('메인 프로세스 파일 변경됨. 다시 빌드 중');
             process.env.BUILD_TARGET = 'main';
+            await build({ configFile: path.resolve(__dirname, '../vite.config.ts') });
+
+            if (electronProcess) {
+                electronProcess.kill();
+                startElectron();
+            }
+        });
+
+        // Worker 파일 변경 감지
+        const workerWatcher = chokidar.watch('src/workers/**/*.ts', {
+            ignoreInitial: true,
+        });
+
+        workerWatcher.on('change', async () => {
+            console.log('Worker 파일 변경됨. 다시 빌드 중');
+            process.env.BUILD_TARGET = 'worker';
             await build({ configFile: path.resolve(__dirname, '../vite.config.ts') });
 
             if (electronProcess) {

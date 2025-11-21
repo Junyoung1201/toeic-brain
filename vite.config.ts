@@ -77,5 +77,40 @@ export default defineConfig(({ command, mode }) => {
     };
   }
 
+  // Worker 프로세스 설정
+  if (buildTarget === 'worker') {
+    return {
+      build: {
+        outDir: 'dist/workers',
+        lib: {
+          entry: 'src/workers/whisper-worker.ts',
+          formats: ['es'],
+          fileName: () => 'whisper-worker.js',
+        },
+        rollupOptions: {
+          external: [
+            'worker_threads',
+            'path',
+            'fs',
+            'child_process',
+            ...builtinModules,
+            '@xenova/transformers',
+            '@ffmpeg-installer/ffmpeg',
+            'wavefile'
+          ],
+          output: {
+            entryFileNames: '[name].js',
+          },
+        },
+        emptyOutDir: false,
+        minify: isProduction,
+        sourcemap: true,
+      },
+      resolve: {
+        extensions: ['.ts', '.js'],
+      },
+    };
+  }
+
   return {};
 });
